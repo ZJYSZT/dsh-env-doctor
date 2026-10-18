@@ -1,4 +1,4 @@
-﻿# 检查目录（v1 决策稿）
+# 检查目录（v1 决策稿）
 
 > 这份表是 `dsh-env-doctor` 实现的**唯一依据**。改表 = 改契约；票面之外不要临时加检查。
 > 状态：**v1 已确认并冻结（票 #6，2026-10-14）**。id 不许再改；将来新增检查只能往后追加序号（E.6、E.7…），已有 id 不重排。
@@ -119,7 +119,7 @@
 
 - **PS**：`dsh --version`（应用自带的 `…\resources\runtime\cli\bin\dsh.cmd`）+ `node --version`
 - **Bash**：`dsh --version; node --version`
-- **判据**：`dsh` 找不到 → `fail/high`；Node 主版本 < 20 → `warn/medium`；否则 `ok`。实测 dsh `0.2.0-rc.2`、node `v24.21.0`。
+- **判据**：`dsh` 找不到 → `warn/low`（**v1 实现修正了初稿的 `fail/high`**：这个工具本身就跑在 dsh 里，PATH 上找不到 dsh 只说明它是从应用自带 runtime 起的，不等于环境坏）；Node 主版本 < 20 → `warn/medium`；否则 `ok`。实测 dsh `0.2.0-rc.2`、node `v24.21.0`。
 
 ### E.2 必备命令是否就位 — 中
 
@@ -161,9 +161,13 @@
 - **判据**：剩余 < 10 GB → `warn/medium`（装大依赖会失败）；`LongPathsEnabled=0` → `warn/low`（`node_modules` 深路径可能超 260）。实测 55.8 GB / 400 GB、`LongPathsEnabled=0`。
 - **修复**：清理命令只给；开长路径要管理员改注册表 → **永不动手**，只给命令。
 
-## 3. 与报告原型的差异（必须同步）
+## 3. 与报告原型的一致性（已对齐）
 
-报告原型（`docs/prototypes/report/`）里的分组标签是**示意值**：原型写 `A=运行时与工具链, B=沙箱与文件权限, C=git 与凭据, D=网络与代理, E=插件与技能装载, F=磁盘与编码`，与本目录的 A–F 定义**不一致**。本目录为准（它是票 #6 批准的原始范围）；实现时把 `render.mjs` 的 `GROUP_LABEL` 与本文件的 17 个 id 对齐，样例重新生成即可。
+早期原型（`docs/prototypes/report/render.mjs`）里的分组标签是示意值（`A=运行时与工具链, B=沙箱与文件权限, C=git 与凭据, D=网络与代理, E=插件与技能装载, F=磁盘与编码`），与本目录的 A–F 定义不一致。**已按本目录对齐**（本目录为准：票 #6 批准的原始范围）：
+
+- 分组标签现在是 `A 沙箱与文件权限 / B Git Bash / C 网络 · TLS · 凭据 / D 执行策略 / E 工具链 / F 权限与安装通道`，落在 `lib/report.js` 的 `GROUP_LABEL` 里——原型渲染器已删掉，渲染只有一处实现。
+- 样例（`sample-result.json` / `sample-report.md` / `sample-summary.md`）由 `node docs/prototypes/report/make-samples.mjs` 用同一个渲染器重新生成，`verify.mjs` 会挡住「规范值改了但样例没重生成」。
+- `verify.mjs` 还会比对 `report.schema.json` 与 `lib/report.js` 的 `valueSchema`：去掉注释键后必须逐键相同，防止文档与代码各写一份。
 
 ## 4. 摘要折叠规则（已确认）
 

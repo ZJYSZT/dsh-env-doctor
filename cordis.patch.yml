@@ -1,0 +1,13 @@
+# dsh-env-doctor 的 profile 补丁层（bundle 入口）。
+# `dsh plugin add` 只会读这个文件、把它合进 profile 的层列表，不会替你写它 —— 所以它必须随包发布。
+# 两行：
+#   dsh-env-doctor       主行：往进程内注册一条技能（ctx.skills.register）
+#   dsh-env-doctor-tools 工具行：注册 dsh_env_doctor 工具（ctx.tools.register）
+# 行 id 必须与 lib/index.js、lib/tools.js 里导出的 name 逐字一致。
+- insert:
+    - id: dsh-env-doctor
+      name: 'dsh-env-doctor'
+      config: {}
+    - id: dsh-env-doctor-tools
+      name: 'dsh-env-doctor/tools'
+      config: {}

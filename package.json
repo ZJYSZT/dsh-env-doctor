@@ -50,7 +50,12 @@
   },
   "private": true,
   "scripts": {
-    "test": "node --test test/",
+    "test": "node test/run.mjs && node test/safety.mjs",
+    "test:unit": "node test/run.mjs",
+    "test:safety": "node test/safety.mjs",
+    "test:e2e": "node test/e2e-real.mjs",
+    "test:installed": "node test/e2e-installed.mjs",
+    "verify:samples": "node docs/prototypes/report/make-samples.mjs && node docs/prototypes/report/verify.mjs",
     "pack:check": "npm pack --dry-run"
   }
 }

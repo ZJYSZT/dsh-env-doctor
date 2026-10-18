@@ -6,7 +6,7 @@
   "workspaceRoot": "C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace",
   "reportPath": "C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace\\.dsh-doctor\\report-20261014-171203.md",
   "verdict": "fail",
-  "counts": { "ok": 12, "warn": 3, "fail": 1, "undiagnosed": 1 },
+  "counts": { "ok": 13, "warn": 2, "fail": 1, "undiagnosed": 1 },
   "results": [
     {
       "id": "A.1",
@@ -48,16 +48,23 @@
       "id": "B.2",
       "group": "B",
       "title": "bash 是否在 PATH 里",
-      "verdict": "warn",
-      "level": "low",
-      "detail": "bash 不在 PATH 上，脚本里直接写 bash 会失败。Git 装在了 D:\\Git，但 bin 目录没进用户 PATH。",
-      "evidence": "Get-Command bash → 未找到\nD:\\Git\\Git\\bin\\bash.exe 存在",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "原先 bash 不在 PATH（Git 装在 D:\\Git，bin 没进用户级 PATH，脚本里直接写 bash 会失败）。这次执行了白名单里的修复：把 D:\\Git\\Git\\bin 追加到用户级 PATH 并复检，新进程能解析到 bash。撤销就是去掉这一条。",
+      "evidence": "修复前：where bash 无结果；D:\\Git\\Git\\bin\\bash.exe 存在\n修复后：where bash → D:\\Git\\Git\\bin\\bash.exe",
       "fix": {
         "command": "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path','User') + ';D:\\Git\\Git\\bin', 'User')",
         "risk": "low",
         "needsAdmin": false,
         "autoApplicable": true,
         "note": "只追加一条用户级 PATH，不动系统级；撤销就去掉这一条。"
+      },
+      "applied": {
+        "at": "2026-10-14T17:12:21+08:00",
+        "id": "B.2",
+        "command": "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path','User') + ';D:\\Git\\Git\\bin', 'User')",
+        "before": "用户级 PATH：C:\\Users\\神\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Users\\神\\AppData\\Roaming\\npm（没有 bash 目录）",
+        "outcome": "ok"
       }
     },
     {

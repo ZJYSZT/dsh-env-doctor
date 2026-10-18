@@ -1,6 +1,6 @@
 {
   "title": "dsh-env-doctor 体检结果（规范值 canonical output）",
-  "description": "dsh_env_doctor 工具返回的规范值，同时也是 .dsh-doctor/report-<ts>.json 的内容。注意：这不是一份标准 JSON Schema 文档（没有 $schema 关键字）——它是宿主 DSH 允许的窄子集：type / oneOf / properties / required / additionalProperties(仅布尔) / items / enum / const，外加 title / description / default / examples 注释键。本文件可以直接当作工具注册里的 output.schema。",
+  "description": "dsh_env_doctor 工具返回的规范值，同时也是 .dsh-doctor/report-<ts>.json 的内容。注意：这不是一份标准 JSON Schema 文档（没有 $schema 关键字）——它是宿主 DSH 允许的窄子集：type / oneOf / properties / required / additionalProperties(仅布尔) / items / enum / const，外加 title / description / default / examples 注释键。本文件可以直接当作工具注册里的 output.schema；代码里的唯一实现是 lib/report.js 的 valueSchema，docs/prototypes/report/verify.mjs 会逐键比对两者（去掉注释键后必须完全相同）。",
   "type": "object",
   "properties": {
     "schemaVersion": {
@@ -14,8 +14,8 @@
     },
     "mode": {
       "type": "string",
-      "enum": ["check", "explain"],
-      "description": "check = 跑检查；explain = 判定一段拒绝/报错文案。"
+      "enum": ["check", "explain", "fix"],
+      "description": "check = 跑检查；explain = 判定一段拒绝/报错文案；fix = 对白名单里的一项执行修复并复检。"
     },
     "sandboxMode": {
       "type": "string",
@@ -60,7 +60,7 @@
           "group": {
             "type": "string",
             "enum": ["A", "B", "C", "D", "E", "F"],
-            "description": "A 运行时与工具链 / B 沙箱与文件权限 / C git 与凭据 / D 网络与代理 / E 插件与技能装载 / F 磁盘与编码。"
+            "description": "A 沙箱与文件权限 / B Git Bash / C 网络 · TLS · 凭据 / D 执行策略 / E 工具链 / F 权限与安装通道。"
           },
           "title": {
             "type": "string",
@@ -109,6 +109,35 @@
               }
             },
             "required": ["command", "risk", "needsAdmin", "autoApplicable"],
+            "additionalProperties": false
+          },
+          "applied": {
+            "type": "object",
+            "description": "这一项实际执行过的修复记录（只有 mode=fix 且真的跑了才有）。before 是撤销依据：报告里每条 applied 都跟着一行「旧值」。",
+            "properties": {
+              "at": {
+                "type": "string",
+                "description": "执行时刻，ISO 8601。"
+              },
+              "id": {
+                "type": "string",
+                "description": "被执行的检查 id，必须在白名单（B.2 / C.4 / D.1 / E.3）里。"
+              },
+              "command": {
+                "type": "string",
+                "description": "实际执行的完整命令。"
+              },
+              "before": {
+                "type": "string",
+                "description": "改动前的值/状态，撤销就靠它。"
+              },
+              "outcome": {
+                "type": "string",
+                "enum": ["ok", "failed", "cancelled", "rejected"],
+                "description": "执行结果。失败不自动重试。"
+              }
+            },
+            "required": ["at", "id", "command", "before", "outcome"],
             "additionalProperties": false
           }
         },

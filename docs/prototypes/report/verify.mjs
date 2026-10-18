@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 /**
- * dsh-env-doctor · 报告原型验证（throwaway）
+ * dsh-env-doctor · 报告契约验证
  *
- * 用宿主真实的校验器验三件事：
+ * 验六件事：
  *  1. report.schema.json 落在 DSH 允许的窄子集里（能直接当 output.schema 用）；
  *  2. 子集检查是真的（负面对照：$schema / format 之类必须被拒）；
- *  3. sample-result.json 通过 schema，且报告/摘要与规范值一致、不漂移。
+ *  3. 文档 schema 与 lib/report.js 的 valueSchema 去掉注释键后完全一致（防两处各写一份）；
+ *  4. sample-result.json 通过 schema，且 counts / undiagnosed / verdict 自洽；
+ *  5. render() 返回 ContentBlock[]（工具 output.render 的契约形状），摘要 ≤14 行；
+ *  6. 落盘的 sample-report.md / sample-summary.md 与当前渲染器逐字一致（改了规范值必须重新生成）。
  */
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
+
+import { assertConsistent, render, renderReport, valueSchema } from '../../../lib/report.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const SCHEMA_FILE = join(HERE, 'report.schema.json')
@@ -21,7 +26,6 @@ const SUMMARY_FILE = join(HERE, 'sample-summary.md')
 const SUBSET_MOD = 'C:/Users/神/AppData/Roaming/npm/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-tools/lib/types/json-schema.js'
 
 const { assertSupportedJsonSchema, validateJsonSchemaValue } = await import(pathToFileURL(SUBSET_MOD).href)
-const { assertConsistent, render, renderReport } = await import(pathToFileURL(join(HERE, 'render.mjs')).href)
 
 let failures = 0
 function check(name, fn) {
@@ -32,6 +36,29 @@ function check(name, fn) {
     failures += 1
     console.log(`FAIL  ${name} — ${e && e.message ? e.message : e}`)
   }
+}
+
+const ANNOTATIONS = new Set(['title', 'description', 'default', 'examples'])
+function strip(node) {
+  if (Array.isArray(node)) return node.map(strip)
+  if (node && typeof node === 'object') {
+    const out = {}
+    for (const [key, value] of Object.entries(node)) {
+      if (!ANNOTATIONS.has(key)) out[key] = strip(value)
+    }
+    return out
+  }
+  return node
+}
+function canonical(node) {
+  if (Array.isArray(node)) return `[${node.map(canonical).join(',')}]`
+  if (node && typeof node === 'object') {
+    return `{${Object.keys(node)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonical(node[key])}`)
+      .join(',')}}`
+  }
+  return JSON.stringify(node)
 }
 
 const schema = JSON.parse(readFileSync(SCHEMA_FILE, 'utf8'))
@@ -64,6 +91,20 @@ check('负面对照：format 关键字被拒', () => {
   return String(threw.code || threw.message)
 })
 
+check('文档 schema 与 lib/report.js 的 valueSchema 一致（去掉注释键后逐键相同）', () => {
+  const doc = canonical(strip(schema))
+  const code = canonical(strip(valueSchema))
+  if (doc !== code) {
+    for (let i = 0; i < Math.max(doc.length, code.length); i += 1) {
+      if (doc[i] !== code[i]) {
+        throw new Error(`第 ${i} 个字符起不同：文档 ${doc.slice(i, i + 80)} ≠ 代码 ${code.slice(i, i + 80)}`)
+      }
+    }
+    throw new Error('两份 schema 不同')
+  }
+  return `${doc.length} 字符完全相同`
+})
+
 check('sample-result.json 通过 schema', () => {
   const violations = validateJsonSchemaValue(schema, value)
   if (violations.length > 0) throw new Error(violations.join('; '))
@@ -78,7 +119,7 @@ check('负面对照：伪造的 verdict 会被 schema 抓住', () => {
   return violations[0]
 })
 
-check('counts / undiagnosed / verdict 与 results 自洽', () => {
+check('counts / undiagnosed / verdict 与 results 自洽（warn/fail 必须带 fix.command）', () => {
   assertConsistent(value)
   return `counts=${JSON.stringify(value.counts)}`
 })
@@ -100,21 +141,26 @@ check('落盘的报告与摘要没有漂移（重新渲染应与文件逐字相�
   const reportNow = renderReport(value)
   const summaryNow = render({}, value)[0].text
   if (reportOnDisk !== (reportNow.endsWith('\n') ? reportNow : reportNow + '\n')) {
-    throw new Error('sample-report.md 与当前渲染结果不同 —— 规范值改了但没重新生成')
+    throw new Error('sample-report.md 与当前渲染结果不同 —— 规范值改了但没重新生成（node docs/prototypes/report/make-samples.mjs）')
   }
   if (summaryOnDisk !== summaryNow + '\n') {
-    throw new Error('sample-summary.md 与当前渲染结果不同 —— 规范值改了但没重新生成')
+    throw new Error('sample-summary.md 与当前渲染结果不同 —— 规范值改了但没重新生成（node docs/prototypes/report/make-samples.mjs）')
   }
   return '两文件逐字一致'
 })
 
-check('报告里每条问题都有「下一步」或明确的「没有命令」', () => {
+check('报告里每条问题都在「需要你动手的」或「已执行的修复」里', () => {
   const report = readFileSync(REPORT_FILE, 'utf8')
-  for (const r of value.results.filter((x) => x.verdict === 'fail' || x.verdict === 'warn')) {
+  const actionItems = value.results.filter((x) => (x.verdict === 'fail' || x.verdict === 'warn') && !x.applied)
+  for (const r of actionItems) {
     if (!report.includes(`### ${r.id} · ${r.title}`)) throw new Error(`${r.id} 没出现在「需要你动手的」里`)
     if (!r.fix && !report.includes(r.detail)) throw new Error(`${r.id} 没有 fix，细节也没进报告`)
   }
-  return `${value.results.filter((x) => x.verdict === 'fail' || x.verdict === 'warn').length} 条逐条核对`
+  const appliedItem = value.results.find((x) => x.applied)
+  if (appliedItem && !report.includes(`**${appliedItem.id}**`)) {
+    throw new Error(`${appliedItem.id} 的 applied 没进「已执行的修复」`)
+  }
+  return `${actionItems.length} 条待动手 + ${appliedItem ? 1 : 0} 条已执行逐条核对`
 })
 
 console.log(failures === 0 ? '\n全部通过。' : `\n${failures} 项失败。`)
