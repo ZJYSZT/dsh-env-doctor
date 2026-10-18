@@ -46,7 +46,7 @@
 [ ] 6. npm publish（开了 2FA 就加 --otp <六位码>）；预发布用 --tag next
 [ ] 7. git tag v<x.y.z> && git push --tags
 [ ] 8. gh release create v<x.y.z> --notes-from-tag（正文取 CHANGELOG 该小节）
-[ ] 9. 仓库转 public（gh repo edit --visibility public --accept-visibility-change-consequences）
+[x] 9. 仓库转 public（gh repo edit --visibility public --accept-visibility-change-consequences）
 [ ] 10. 干净环境复验：dsh plugin --profile desktop add dsh-env-doctor（等过 minimumReleaseAge）
 ```
 
