@@ -23,12 +23,12 @@ export const SUMMARY_FILE = join(HERE, 'sample-summary.md')
 const VERDICT_LABEL = { ok: '通过', warn: '注意', fail: '失败', undiagnosed: '说不准' }
 const LEVEL_LABEL = { info: '信息', low: '低危', medium: '中危', high: '高危' }
 const GROUP_LABEL = {
-  A: '运行时与工具链',
-  B: '沙箱与文件权限',
-  C: 'git 与凭据',
-  D: '网络与代理',
-  E: '插件与技能装载',
-  F: '磁盘与编码',
+  A: '\u6c99\u7bb1\u4e0e\u6587\u4ef6\u6743\u9650',
+  B: 'Git Bash',
+  C: '\u7f51\u7edc / TLS / \u51ed\u636e',
+  D: '\u6267\u884c\u7b56\u7565',
+  E: '\u5de5\u5177\u94fe',
+  F: '\u6743\u9650\u4e0e\u5b89\u88c5\u901a\u9053',
 }
 /** 报告与摘要里「需要你动手的」排序：先高危，再看严重度。 */
 const LEVEL_RANK = { high: 4, medium: 3, low: 2, info: 1 }
