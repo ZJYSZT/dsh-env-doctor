@@ -6,60 +6,94 @@
   "workspaceRoot": "C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace",
   "reportPath": "C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace\\.dsh-doctor\\report-20261014-171203.md",
   "verdict": "fail",
-  "counts": { "ok": 5, "warn": 2, "fail": 1, "undiagnosed": 1 },
+  "counts": { "ok": 12, "warn": 3, "fail": 1, "undiagnosed": 1 },
   "results": [
     {
       "id": "A.1",
       "group": "A",
-      "title": "DSH 与 Node 版本",
+      "title": "沙箱模式与工作区可写性",
       "verdict": "ok",
       "level": "info",
-      "detail": "dsh 0.2.0-rc.2 / node 24.18.1 / profile desktop。版本可读，profile 存在。",
-      "evidence": "dsh 0.2.0-rc.2 (win32 x64)\nnode v24.18.1"
+      "detail": "当前模式 workspace-write，工作区根可写（报告文件已成功写进去）。模式取自 ctx.sandboxPolicy，不是猜的。",
+      "evidence": "mode=workspace-write\nworkspaceRoot=C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace\nreport write ok"
     },
     {
       "id": "A.2",
       "group": "A",
-      "title": "关键命令都在 PATH 里",
+      "title": "沙箱边界自检：工作区外写入必须被拒",
       "verdict": "ok",
       "level": "info",
-      "detail": "git 2.56.0、gh 2.102.0、node 24.18.1 都能直接调用；没有指向已删除路径的失效条目。",
-      "evidence": "git version 2.56.0.windows.1\ngh version 2.102.0 (2026-09-30)"
+      "detail": "往工作区外写一个探针文件被拒，这是 workspace-write 的预期行为，不是权限损坏。真要写外面，得对那一次操作显式升到更宽的模式并说明理由。",
+      "evidence": "write C:\\Users\\神\\dsh-doctor-probe.txt → UnauthorizedAccessException（预期内拒绝）"
+    },
+    {
+      "id": "A.3",
+      "group": "A",
+      "title": "工作区 ACL 是否被改坏",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "授权树结构与 workspace-write 的预期一致（能读到自己的写权限，没有异常 AppContainer 包 ACE）。真损坏的判定与修复交棒给内置技能 diagnose-windows-sandbox-acl，本插件不改 ACL。",
+      "evidence": "icacls: S-1-4-803020457-741359850:(OI)(CI)(W,D,DC) / Low Mandatory Level:(OI)(CI)(NW) / 无 S-1-15-2-* 显式包 ACE"
     },
     {
       "id": "B.1",
       "group": "B",
-      "title": "沙箱模式与工作区可写性",
-      "verdict": "ok",
+      "title": "Git Bash 能否启动",
+      "verdict": "undiagnosed",
       "level": "info",
-      "detail": "当前为 workspace-write，工作区根可写。这是本会话实际生效的模式（来自 ctx.sandboxPolicy，不是猜的）。",
-      "evidence": "mode=workspace-write\nworkspaceRoot=C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace"
+      "detail": "在 DSH 沙箱里启动 MSYS2 失败（建不了信号管道），这既可能是沙箱令牌限制，也可能是本机 Git 安装问题——从进程内部区分不了，所以判「说不准」，不判失败。请在新开的普通终端里跑一次确认。",
+      "evidence": "bash.exe: *** fatal error - couldn't create signal pipe, Win32 error 5"
     },
     {
       "id": "B.2",
       "group": "B",
-      "title": "工作区之外的写入被拒",
-      "verdict": "ok",
-      "level": "info",
-      "detail": "尝试写工作区外的路径被拒，这是 workspace-write 的**预期行为**，不是权限损坏。真要写外面，得对那一次操作显式升到更宽的模式并说明理由。",
-      "evidence": "[sandbox: file access denied under workspace-write mode]"
+      "title": "bash 是否在 PATH 里",
+      "verdict": "warn",
+      "level": "low",
+      "detail": "bash 不在 PATH 上，脚本里直接写 bash 会失败。Git 装在了 D:\\Git，但 bin 目录没进用户 PATH。",
+      "evidence": "Get-Command bash → 未找到\nD:\\Git\\Git\\bin\\bash.exe 存在",
+      "fix": {
+        "command": "[Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path','User') + ';D:\\Git\\Git\\bin', 'User')",
+        "risk": "low",
+        "needsAdmin": false,
+        "autoApplicable": true,
+        "note": "只追加一条用户级 PATH，不动系统级；撤销就去掉这一条。"
+      }
     },
     {
       "id": "C.1",
       "group": "C",
-      "title": "gh 登录状态",
+      "title": "npm registry 可达性",
       "verdict": "ok",
       "level": "info",
-      "detail": "已登录 github.com 账号 ZJYSZT，令牌存在 Windows 凭据管理器（keyring），scopes 为 repo / read:org / workflow。",
-      "evidence": "github.com\n  ✓ Logged in to github.com account ZJYSZT (keyring)\n  - Token scopes: 'read:org', 'repo', 'workflow'"
+      "detail": "registry.npmmirror.com 正常响应，装包不会卡在这里。",
+      "evidence": "https://registry.npmmirror.com → 200 (1635 ms)"
     },
     {
       "id": "C.2",
       "group": "C",
-      "title": "git 凭据助手指向一个不存在的程序",
+      "title": "curl / Invoke-WebRequest 的 TLS 栈",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "curl 与 Invoke-WebRequest 都能完成 TLS 握手并取到内容；没有出现 schannel 凭据错误。",
+      "evidence": "curl https://registry.npmmirror.com → 200\nInvoke-WebRequest → 200"
+    },
+    {
+      "id": "C.3",
+      "group": "C",
+      "title": "代理配置三处一致性（env / git / npm）",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "环境变量、git 配置、npm 配置三处都没有代理设置，彼此一致。以后要挂代理，这三处必须一起改，否则会出现「浏览器能开、命令行不行」。",
+      "evidence": "HTTP(S)_PROXY 未设置\ngit config http.proxy → 空\nnpm config get proxy → null"
+    },
+    {
+      "id": "C.4",
+      "group": "C",
+      "title": "git 凭据助手指向的程序是否存在",
       "verdict": "fail",
       "level": "high",
-      "detail": "全局 credential helper 里有一条指向已删除路径的记录，git 在需要凭据时会直接失败（或退回让你手输密码）。这会挡住所有 push/pull，是本次体检里唯一「真的坏了」的一项。",
+      "detail": "全局 credential helper 里有一条指向已删除路径的记录，git 需要凭据时会直接失败（或退回让你手输密码）。这会挡住所有 push/pull，是本次体检里唯一「真的坏了」的一项。",
       "evidence": "credential.https://github.com.helper=!'C:\\old\\gh.exe' auth git-credential",
       "fix": {
         "command": "git config --global --unset-all credential.https://github.com.helper\ngh auth setup-git",
@@ -72,37 +106,89 @@
     {
       "id": "D.1",
       "group": "D",
-      "title": "npm registry 连通性",
-      "verdict": "undiagnosed",
-      "level": "info",
-      "detail": "对 registry.npmmirror.com 的探测 10 秒超时，既没成功也没给出明确错误——这一项「说不准」。不等于坏了：可能是瞬时网络问题，也可能需要代理。",
-      "evidence": "registry.npmmirror.com → timeout after 10000ms"
+      "title": "执行策略是否拦 `.ps1` 脚本",
+      "verdict": "warn",
+      "level": "medium",
+      "detail": "五个 scope 都是 Undefined，生效值是 Restricted，会拦住 npm.ps1 / pnpm.ps1。命令行里敲 npm 时若先解析到 .ps1 就会失败。",
+      "evidence": "Get-ExecutionPolicy -List → 全部 Undefined\nGet-ExecutionPolicy → Restricted",
+      "fix": {
+        "command": "Set-ExecutionPolicy -Scope CurrentUser RemoteSigned",
+        "risk": "low",
+        "needsAdmin": false,
+        "autoApplicable": true,
+        "note": "只改当前用户，不影响系统级；RemoteSigned 仍会拦未签名脚本。"
+      }
     },
     {
       "id": "E.1",
       "group": "E",
-      "title": "已装插件的版本要求与当前 DSH 不匹配",
+      "title": "DSH 与 Node 版本",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "DSH 0.2.0-rc.2，自带运行时 node 24.18.1，PATH 上的 node 是 24.21.0——两个 Node 都在，且都满足插件要求。",
+      "evidence": "dsh 0.2.0-rc.2 (win32 x64)\nDSH runtime node v24.18.1\nPATH node v24.21.0"
+    },
+    {
+      "id": "E.2",
+      "group": "E",
+      "title": "必备命令是否就位",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "git / node / npm / gh 都能直接调用；pwsh 没装，但 DSH 用的是 powershell.exe，不影响使用。",
+      "evidence": "git 2.56.0.windows.1\nnode v24.21.0\ngh 2.102.0\npwsh → 未找到（powershell.exe 可用）"
+    },
+    {
+      "id": "E.3",
+      "group": "E",
+      "title": "同名命令多份安装 / 解析到意料之外",
       "verdict": "warn",
-      "level": "medium",
-      "detail": "@roarpeng/graphflow 声明 peerDependencies @deepseek-ai/dsh-tools >=0.3.0，而当前 DSH 是 0.2.0-rc.2。现在能跑，但下次升级或重装这个插件时会被拒（宿主装完会校验并回滚）。",
-      "evidence": "peerDependencies {\"@deepseek-ai/dsh-tools\":\">=0.3.0\"} — dsh 0.2.0-rc.2",
+      "level": "low",
+      "detail": "npm 与 pnpm 各有 3 份，且命令行解析到的是 .ps1 版本而不是 .cmd——这条与 D.1 叠加就会出问题（.ps1 被执行策略拦住）。",
+      "evidence": "Get-Command npm -All → 3 条（npm.ps1 排第一）\nGet-Command pnpm -All → 3 条（pnpm.ps1 排第一）",
       "fix": {
-        "command": "dsh plugin --profile desktop add @roarpeng/graphflow@2.2.9",
-        "risk": "medium",
+        "command": "把 %APPDATA%\\npm 与 pnpm 的 .cmd shim 所在目录在用户级 PATH 中前置到 WindowsApps 之前",
+        "risk": "low",
         "needsAdmin": false,
-        "autoApplicable": false,
-        "note": "降到与当前 DSH 兼容的版本；升 DSH 才是根治，但那要等上游出正式版。"
+        "autoApplicable": true,
+        "note": "只调用户级 PATH 顺序，不删任何命令；改完重开终端。"
       }
+    },
+    {
+      "id": "E.4",
+      "group": "E",
+      "title": "PATH 上的 pnpm 与 DSH 自带 pnpm 大版本不一致",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "PATH 上的 pnpm 12.8.1 与 DSH 自带的 11.7.0 差一个大版本；插件安装走的是 DSH 自带那份，所以不影响本插件，但自己手动 pnpm install 时要注意 lockfile 兼容性。",
+      "evidence": "pnpm.cmd → 12.8.1\nDSH runtime pnpm → 11.7.0"
+    },
+    {
+      "id": "E.5",
+      "group": "E",
+      "title": "python 是否可用",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "python 3.14.4 可用，是真实安装而不是 WindowsApps 的占位 stub。",
+      "evidence": "python --version → Python 3.14.4"
     },
     {
       "id": "F.1",
       "group": "F",
-      "title": "系统盘剩余空间",
-      "verdict": "warn",
-      "level": "low",
-      "detail": "C: 剩余 12.4 GB。插件与 pnpm store 都在这个盘上，低于 20 GB 时安装大依赖容易失败。暂时不影响使用。",
-      "evidence": "C: free 12.4 GB / total 476 GB"
+      "title": "安装通道：管理员 / winget / choco / scoop",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "当前不是管理员；choco 已装但改不了系统目录，scoop 未装。装工具优先用便携包 + 用户级 PATH，不必提权。",
+      "evidence": "IsInRole(Administrator)=False\nchoco 2.7.4（bin 不可写）\nscoop → 未找到"
+    },
+    {
+      "id": "F.2",
+      "group": "F",
+      "title": "磁盘空间与长路径支持",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "系统盘剩余 55.8 GB，够装依赖；长路径未开启，但现代 git 与 node 已很少触到 260 字符上限。",
+      "evidence": "C: free 55.8 GB / 400 GB\nLongPathsEnabled=0"
     }
   ],
-  "undiagnosed": ["D.1"]
+  "undiagnosed": ["B.1"]
 }

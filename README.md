@@ -83,18 +83,20 @@ dsh_env_doctor(mode="check")
 ```
 体检完成：17 项检查 —— 通过 12、注意 3、失败 1、说不准 1。总体：失败
 
-1. [高危] C.4 git 凭据助手指向一个不存在的程序
-   → git config --global --unset-all credential.https://github.com.helper
-2. [中危] D.1 执行策略拦住 .ps1 脚本
+1. [高危] C.4 git 凭据助手指向的程序是否存在
+   → git config --global --unset-all credential.https://github.com.helper（共 2 条命令，见报告）
+2. [中危] D.1 执行策略是否拦 `.ps1` 脚本
    → Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-3. [低危] B.2 bash 不在 PATH 里
-   → 把 D:\Git\Git\bin 追加到用户级 PATH（共 1 条命令，见报告）
+3. [低危] B.2 bash 是否在 PATH 里
+   → [Environment]::SetEnvironmentVariable('Path', [Environment]::GetEnvironmentVariable('Path','User') + ';D:\Git\Git\bin', 'User')
+4. [低危] E.3 同名命令多份安装 / 解析到意料之外
+   → 把 %APPDATA%\npm 与 pnpm 的 .cmd shim 所在目录在用户级 PATH 中前置到 WindowsApps 之前
 
-说不准：A.2（沙箱内探测不到，见报告）
+说不准：B.1（原因见报告）
 全文：C:\...\.dsh-doctor\report-20261014-171203.md
 ```
 
-完整报告是 Markdown：顶部一张元信息表 + 一句话结论，然后每个问题一节（现象 / 证据 / 下一步），最后是 17 项总表和「说不准的」。样例见 [docs/prototypes/report/sample-report.md](docs/prototypes/report/sample-report.md)。
+完整报告是 Markdown：顶部一张元信息表 + 一句话结论，然后每个问题一节（现象 / 证据 / 下一步），最后是 17 项总表和「说不准的」。样例见 [docs/prototypes/report/sample-report.md](docs/prototypes/report/sample-report.md)（**构造的示例**，用来演示四种 verdict 的形状，不是某台机器的真体检记录）。
 
 ## 7. 常见问题
 
