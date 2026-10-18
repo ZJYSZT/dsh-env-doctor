@@ -2,7 +2,7 @@
 
 > Windows / DSH 环境医生 —— 说一句「体检一下」，拿到「哪里坏了 + 为什么 + 该敲什么」。
 
-**状态：v0.1.0 已实现并通过四套测试，尚未发布到 npm。** 第 3 节的 npm 安装命令要等发布；现在可以按第 9 节从本地目录装进 profile。设计文档仍在（[检查目录](docs/checks/catalog.md)、[安全模型](docs/safety/model.md)、[报告格式](docs/prototypes/report/)），本 README 是发布时的终态骨架。
+**状态：v0.1.0 已发布到 npm。** 设计文档仍在（[检查目录](docs/checks/catalog.md)、[安全模型](docs/safety/model.md)、[报告格式](docs/prototypes/report/)），随包一起发。
 
 [中文](#dsh-env-doctor) · [English](#english)
 

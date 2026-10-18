@@ -5,6 +5,7 @@ dist/
 
 # 本地运行态
 .tmp/
+.tmp-report/
 .dsh-doctor/
 coverage/
 *.log

@@ -19,7 +19,8 @@ import { CHECKS } from '../lib/checks.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const packageRoot = path.resolve(here, '..')
-const devRoot = path.resolve(packageRoot, '..')
+const devRoot = path.join(packageRoot, '.tmp-report')
+fs.rmSync(devRoot, { recursive: true, force: true })
 
 let passed = 0
 let failed = 0
@@ -186,6 +187,7 @@ for (const result of value.results) {
 console.log('\n摘要：')
 console.log(registered.output.render({}, value)[0].text)
 console.log(`\n共执行 ${executedCommands.length} 条命令；报告：${value.reportPath}`)
+fs.rmSync(devRoot, { recursive: true, force: true })
 console.log(`\nPASS ${passed} / FAIL ${failed}`)
 process.exitCode = failed === 0 ? 0 : 1
 

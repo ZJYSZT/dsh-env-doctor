@@ -28,7 +28,7 @@
 1. **已发布到公共 registry**，且版本过了 pnpm 的 `minimumReleaseAge` 供应链接管期。本机 desktop profile 的 `pnpm-workspace.yaml` 里有这个策略；刚发布的版本可能被静默跳过。README 里要给用户的解法：`add dsh-env-doctor@latest --registry https://registry.npmjs.org`，或等一天。
 2. **`dsh.bundle.patch` 必须指向包里真实存在的 `cordis.patch.yml`**。这是唯一的激活开关：`dsh-plugin-manager` 的 `bundleManifest()` 在没有 `dsh.bundle.patch` 时返回 undefined，包会被装成**普通依赖**，只打一行 `declares no dsh.bundle — installed as a plain dependency, not a profile layer` 的警告。缺了它，装上也不加载。
 3. **`files` 必须覆盖运行期需要的一切**：`lib/`、`cordis.patch.yml`、`bundled-skills/`（技能正文由 `lib/index.js` 从包目录读 SKILL.md）、`docs/checks` + `docs/safety` + `docs/prototypes`（README 链接的文档，随包发也能离线读）、`LICENSE`、`NOTICE`、`README.md`、`CHANGELOG.md`。`private: true` 时 `npm pack` 仍然可用，所以**发布前用 `npm pack --dry-run --json` 检查文件清单**，别靠记忆。
-   - 实现落地后实测（2026-10-18，21 个文件）：`size 61,770` / `unpackedSize 178,051`。`docs` 已收窄成 `docs/checks`、`docs/safety`、`docs/prototypes`；调研稿留在 `default-workspace` 仓库、不随包发。
+   - 实现落地后实测（2026-10-18 发布日，21 个文件）：`size 61,641` / `unpackedSize 177,816`。`docs` 已收窄成 `docs/checks`、`docs/safety`、`docs/prototypes`；调研稿留在 `default-workspace` 仓库、不随包发。
 4. **`exports` 的子路径要能解析**：`cordis.patch.yml` 里的行 `name: 'dsh-env-doctor/tools'` 靠 `exports["./tools"]`；漏写这个子路径，行会 import 失败（实测 dsh-hello 的 `./tools` 行就是这么成功的）。
 5. **不写 `peerDependencies` 里的 `@deepseek-ai/dsh*`**：这是有意为之。写了会被宿主的兼容性检查在**安装后**拦下并回滚（`installation rejected` + 恢复 package.json/lockfile），更要命的是 pnpm 会为它装**第二份**工具包——deck 的血泪注释记着：第二份副本的 identity 与宿主不一致，所有工具调用崩在 `Cannot read properties of undefined (reading 'prepare')`。宿主能力一律运行期用 `ctx.get('shell')` / `ctx.get('tools')` 探测，不声明依赖。
 6. **`engines.dsh` 只是声明**，没有任何代码读它（`dsh-package-manifest` 的类型注释原话："declarative until a reader enforces it"）。留着它是为了让市场和人类看得懂，不要指望它挡住不兼容。
@@ -39,10 +39,10 @@
 
 ```text
 [ ] 1. npm 已登录：npm.cmd whoami（本机实测：未登录，报 ENEEDAUTH）
-[ ] 2. package.json 的 private 改为 false；version 改成目标版本
-[ ] 3. CHANGELOG.md 顶部把 [Unreleased] 改成 [x.y.z] - YYYY-MM-DD
-[ ] 4. npm pack --dry-run --json  → 人工核对文件清单（lib/ cordis.patch.yml bundled-skills/ LICENSE NOTICE README CHANGELOG）
-[ ] 5. 本地装一次真跑：dsh plugin --profile <临时 profile> add ./dsh-env-doctor-x.y.z.tgz
+[x] 2. package.json 的 private 改为 false；version 改成目标版本
+[x] 3. CHANGELOG.md 顶部把 [Unreleased] 改成 [x.y.z] - YYYY-MM-DD
+[x] 4. npm pack --dry-run --json  → 人工核对文件清单（lib/ cordis.patch.yml bundled-skills/ LICENSE NOTICE README CHANGELOG）
+[x] 5. 本地装一次真跑：dsh plugin --profile <临时 profile> add ./dsh-env-doctor-x.y.z.tgz
 [ ] 6. npm publish（开了 2FA 就加 --otp <六位码>）；预发布用 --tag next
 [ ] 7. git tag v<x.y.z> && git push --tags
 [ ] 8. gh release create v<x.y.z> --notes-from-tag（正文取 CHANGELOG 该小节）

@@ -2,14 +2,14 @@
 
 格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [SemVer](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.1.0] - 2026-10-18
 
 ### Added
 
 - v0.1.0 实现落地（可安装、可调用、可自测）：
   - `lib/` 六件：`index.js`（注册 bundled 技能）、`tools.js`（`dsh_env_doctor` 工具 + 单调护栏）、`probe.js`（单一只读执行器，一律走宿主 `ctx.shell`，不自己 spawn）、`checks.js`（17 项检查）、`report.js`（规范值 / 一致性闸门 / 摘要与全文渲染）、`fix.js`（4 条白名单修复）。
   - `cordis.patch.yml` 两行（技能包 + 工具包）与 `bundled-skills/env-doctor/SKILL.md`。
-  - `test/` 四套：`run.mjs`（假 shell，25 条断言）、`safety.mjs`（四组安全测试）、`e2e-real.mjs`（本机真跑 17 项）、`e2e-installed.mjs`（装进 profile 后按包名解析并注册）。
+  - `test/` 四套：`run.mjs`（假 shell，24 条断言）、`safety.mjs`（四组安全测试）、`e2e-real.mjs`（本机真跑 17 项）、`e2e-installed.mjs`（装进 profile 后按包名解析并注册）。
   - 报告样例改由 `lib/report.js` 生成（`make-samples.mjs`）；`verify.mjs` 增加「文档 schema ≡ 代码 valueSchema」与样例漂移两道闸门；原型渲染器 `render.mjs` 删除，渲染只有一处实现。
 - 设计定稿（文档）：
   - 17 项检查目录（A 沙箱/ACL · B Git Bash · C 网络/TLS/凭据 · D 执行策略 · E 工具链 · F 权限与安装通道），见 `docs/checks/catalog.md`。
@@ -29,7 +29,3 @@
 - `F.2` 不再把「长路径没读到」写成「都正常」：磁盘够但 `LongPathsEnabled` 未知时判 `undiagnosed`；同时把磁盘空闲判据对齐目录（`< 10 GB → warn`），evidence 里写真实盘符而不是写死 `C:`。
 - `C.2` 的 TLS 探测从 `curl -o NUL`（会被只读护栏当写命令拦掉）改成 `curl -I`（HEAD 请求，不落盘），并对 GBK 代码页输出做可读化处理。
 - `test/safety.mjs` 第 4 组补两条：宿主 shell 全面失败时报告仍完整；单个检查抛异常被降级成 `undiagnosed` 且不污染其余 17 项（`runChecks` 的 try/catch 现在有测试盯着）。
-
-### Not yet
-
-- 首次 `npm publish`（registry 登录与 OTP 见 `RELEASE.md`）。

@@ -11,7 +11,8 @@ import { FIXABLE, applyFix, planFix } from '../lib/fix.js'
 import { runDoctor } from '../lib/tools.js'
 import { CHECKS } from '../lib/checks.js'
 
-const WORKSPACE = join(import.meta.dirname, '..', '..')
+const WORKSPACE = join(import.meta.dirname, '..', '.tmp-report')
+fs.rmSync(WORKSPACE, { recursive: true, force: true })
 let failures = 0
 function check(label, passed) {
   console.log(`${passed ? 'PASS' : 'FAIL'}  ${label}`)
@@ -216,6 +217,7 @@ check(
   withThrower.results.length === 18 && withThrower.counts.ok + withThrower.counts.warn + withThrower.counts.fail + withThrower.counts.undiagnosed === 18,
 )
 CHECK_TABLE.pop()
+fs.rmSync(WORKSPACE, { recursive: true, force: true })
 
 if (failures === 0) {
   console.log('四组安全测试：全部通过')

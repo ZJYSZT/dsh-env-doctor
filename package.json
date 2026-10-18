@@ -50,7 +50,7 @@
       "patch": "./cordis.patch.yml"
     }
   },
-  "private": true,
+  "private": false,
   "scripts": {
     "test": "node test/run.mjs && node test/safety.mjs",
     "test:unit": "node test/run.mjs",
