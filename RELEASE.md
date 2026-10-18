@@ -27,8 +27,8 @@
 
 1. **已发布到公共 registry**，且版本过了 pnpm 的 `minimumReleaseAge` 供应链接管期。本机 desktop profile 的 `pnpm-workspace.yaml` 里有这个策略；刚发布的版本可能被静默跳过。README 里要给用户的解法：`add dsh-env-doctor@latest --registry https://registry.npmjs.org`，或等一天。
 2. **`dsh.bundle.patch` 必须指向包里真实存在的 `cordis.patch.yml`**。这是唯一的激活开关：`dsh-plugin-manager` 的 `bundleManifest()` 在没有 `dsh.bundle.patch` 时返回 undefined，包会被装成**普通依赖**，只打一行 `declares no dsh.bundle — installed as a plain dependency, not a profile layer` 的警告。缺了它，装上也不加载。
-3. **`files` 必须覆盖运行期需要的一切**：`lib/`、`cordis.patch.yml`、`bundled-skills/`（技能走 `registerProvider` 时要从包目录读 SKILL.md）、`LICENSE`、`NOTICE`、`README.md`、`CHANGELOG.md`。`private: true` 时 `npm pack` 仍然可用，所以**发布前用 `npm pack --dry-run --json` 检查文件清单**，别靠记忆。
-   - 实现落地后实测（2026-10-18，23 个文件）：`size 98,460` / `unpackedSize 271,026`，其中约 100 KB 是 `docs/research/` 的两份调研报告。**发布时把 `files` 里的 `docs` 收窄成 `docs/checks`、`docs/safety`、`docs/prototypes`**，调研报告留在仓库里、不随包发。
+3. **`files` 必须覆盖运行期需要的一切**：`lib/`、`cordis.patch.yml`、`bundled-skills/`（技能正文由 `lib/index.js` 从包目录读 SKILL.md）、`docs/checks` + `docs/safety` + `docs/prototypes`（README 链接的文档，随包发也能离线读）、`LICENSE`、`NOTICE`、`README.md`、`CHANGELOG.md`。`private: true` 时 `npm pack` 仍然可用，所以**发布前用 `npm pack --dry-run --json` 检查文件清单**，别靠记忆。
+   - 实现落地后实测（2026-10-18，21 个文件）：`size 61,770` / `unpackedSize 178,051`。`docs` 已收窄成 `docs/checks`、`docs/safety`、`docs/prototypes`；调研稿留在 `default-workspace` 仓库、不随包发。
 4. **`exports` 的子路径要能解析**：`cordis.patch.yml` 里的行 `name: 'dsh-env-doctor/tools'` 靠 `exports["./tools"]`；漏写这个子路径，行会 import 失败（实测 dsh-hello 的 `./tools` 行就是这么成功的）。
 5. **不写 `peerDependencies` 里的 `@deepseek-ai/dsh*`**：这是有意为之。写了会被宿主的兼容性检查在**安装后**拦下并回滚（`installation rejected` + 恢复 package.json/lockfile），更要命的是 pnpm 会为它装**第二份**工具包——deck 的血泪注释记着：第二份副本的 identity 与宿主不一致，所有工具调用崩在 `Cannot read properties of undefined (reading 'prepare')`。宿主能力一律运行期用 `ctx.get('shell')` / `ctx.get('tools')` 探测，不声明依赖。
 6. **`engines.dsh` 只是声明**，没有任何代码读它（`dsh-package-manifest` 的类型注释原话："declarative until a reader enforces it"）。留着它是为了让市场和人类看得懂，不要指望它挡住不兼容。
@@ -60,4 +60,4 @@
 
 ## 6. 文档迁移（发布前必须做）
 
-设计文档现在在 `default-workspace` 仓库（私有）：`docs/checks/catalog.md`、`docs/safety/model.md`、`docs/prototypes/report/`、`docs/research/`。插件仓库的 README 会链接这些文档——**转 public 之前**必须把它们复制进本仓库 `docs/`（`files` 已包含 `docs`），否则公开的 README 会指向别人看不见的私有仓库。
+设计文档现在在 `default-workspace` 仓库（私有）：`docs/checks/catalog.md`、`docs/safety/model.md`、`docs/prototypes/report/`、`docs/research/`。插件仓库的 README 会链接这些文档——**转 public 之前**必须把前三个目录复制进本仓库 `docs/`（`files` 只收窄到 `docs/checks`、`docs/safety`、`docs/prototypes`；调研稿不随包发），否则公开的 README 会指向别人看不见的私有仓库。

@@ -147,7 +147,9 @@ fs.rmSync(inside, { force: true })
 // ---------- 4. 不冒充 ----------
 console.log('## 4. 观测失败不冒充 ok')
 const noShell = await runDoctor({ sandboxPolicy: services.sandboxPolicy, get: () => undefined }, { checks: 'all' })
-const shellFree = new Set(['A.1', 'A.2', 'C.1'])
+// A.1/A.2 用 fs 探针、B.2 读 env PATH + fs.existsSync、C.1 用进程内 fetch、E.1 读 process.version 与 env PATH
+// —— 这五项不需要子进程，所以 shell 炸掉时它们仍能给出真实结论；其余 12 项必须 undiagnosed。
+const shellFree = new Set(['A.1', 'A.2', 'B.2', 'C.1', 'E.1'])
 check(
   '没 shell 时命令类检查全部 undiagnosed',
   noShell.results.every((result) => shellFree.has(result.id) || result.verdict === 'undiagnosed'),
@@ -173,6 +175,47 @@ check(
   denied.results[0].verdict === 'undiagnosed' && /SHELL_DENIED|沙箱/.test(denied.results[0].detail),
 )
 check('17 项里没有「观测失败却写 ok」的项', CHECKS.length === 17)
+
+// ---------- 4b. 单个检查抛异常不拖垮整份报告 ----------
+const shellAlwaysThrows = {
+  sandboxPolicy: services.sandboxPolicy,
+  get: () => ({
+    resolve: (request) => request,
+    execute: async () => {
+      throw new Error('boom: shell 服务自身炸了')
+    },
+  }),
+}
+const allBroken = await runDoctor(shellAlwaysThrows, { checks: 'all' })
+check('shell 全面炸掉时仍然产出完整报告', allBroken.results.length === 17 && Boolean(allBroken.reportPath))
+check(
+  'shell 全面炸掉时没有任何一项被写成 ok 之外的假结论',
+  allBroken.results.every((result) => result.verdict === 'undiagnosed' || shellFree.has(result.id)),
+)
+
+// 往 CHECKS 里塞一个必抛的假检查：runChecks 的 try/catch 必须把它降级成 undiagnosed，
+// 而不是让异常冒到工具调用层（那时模型看到的是一次失败调用而不是一份报告）。
+const { CHECKS: CHECK_TABLE } = await import('../lib/checks.js')
+CHECK_TABLE.push({
+  id: 'Z.1',
+  group: 'F',
+  title: '故意抛异常的假检查',
+  level: 'info',
+  async run() {
+    throw new Error('boom: 检查内部炸了')
+  },
+})
+const withThrower = await runDoctor(services, { checks: 'all' })
+const thrower = withThrower.results.find((result) => result.id === 'Z.1')
+check(
+  '抛异常的检查被降级成 undiagnosed 并带出原因',
+  Boolean(thrower) && thrower.verdict === 'undiagnosed' && /boom|检查自身出错/.test(thrower.detail),
+)
+check(
+  '抛异常的检查没有污染其它 17 项（报告仍完整）',
+  withThrower.results.length === 18 && withThrower.counts.ok + withThrower.counts.warn + withThrower.counts.fail + withThrower.counts.undiagnosed === 18,
+)
+CHECK_TABLE.pop()
 
 if (failures === 0) {
   console.log('四组安全测试：全部通过')
