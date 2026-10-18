@@ -1,0 +1,56 @@
+{
+  "name": "dsh-env-doctor",
+  "version": "0.1.0",
+  "description": "Windows / DSH 环境医生：体检开发环境，给出「哪里坏了 + 为什么 + 该敲什么」。 | Diagnose your Windows DSH environment and print exact, actionable fixes.",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "windows",
+    "doctor",
+    "diagnostics",
+    "environment"
+  ],
+  "license": "Apache-2.0",
+  "author": "ZJYSZT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZJYSZT/dsh-env-doctor.git"
+  },
+  "homepage": "https://github.com/ZJYSZT/dsh-env-doctor#readme",
+  "bugs": {
+    "url": "https://github.com/ZJYSZT/dsh-env-doctor/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./tools": "./lib/tools.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "bundled-skills",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "dsh": ">=0.2.0-rc.2",
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "private": true,
+  "scripts": {
+    "test": "node --test test/",
+    "pack:check": "npm pack --dry-run"
+  }
+}

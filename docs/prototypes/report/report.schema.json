@@ -1,0 +1,138 @@
+{
+  "title": "dsh-env-doctor 体检结果（规范值 canonical output）",
+  "description": "dsh_env_doctor 工具返回的规范值，同时也是 .dsh-doctor/report-<ts>.json 的内容。注意：这不是一份标准 JSON Schema 文档（没有 $schema 关键字）——它是宿主 DSH 允许的窄子集：type / oneOf / properties / required / additionalProperties(仅布尔) / items / enum / const，外加 title / description / default / examples 注释键。本文件可以直接当作工具注册里的 output.schema。",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0",
+      "description": "格式版本。不兼容的变更才递增；历史对比靠它判断能不能比。"
+    },
+    "generatedAt": {
+      "type": "string",
+      "description": "ISO 8601 本地时间（带时区偏移），例如 2026-10-14T17:12:03+08:00。子集不支持 format，所以只按字符串约定。"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["check", "explain"],
+      "description": "check = 跑检查；explain = 判定一段拒绝/报错文案。"
+    },
+    "sandboxMode": {
+      "type": "string",
+      "enum": ["read-only", "workspace-write", "danger-full-access", "unknown"],
+      "description": "本次调用时生效的沙箱模式（来自 ctx.sandboxPolicy）。unknown 表示拿不到策略对象。"
+    },
+    "workspaceRoot": {
+      "type": "string",
+      "description": "工作区根的绝对路径。判断「预期内隔离 vs 真损坏」的唯一锚点。"
+    },
+    "reportPath": {
+      "type": "string",
+      "description": "完整 Markdown 报告的落盘路径；同目录下还有同名 .json（本结构）。"
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["ok", "warn", "fail", "undiagnosed"],
+      "description": "总体结论。规则：有任何 fail → fail；否则有任何 warn → warn；否则若全部结果都是 undiagnosed → undiagnosed；其余 → ok。undiagnosed 与 ok 并存时不抬高总体，但在摘要里单独提示。"
+    },
+    "counts": {
+      "type": "object",
+      "description": "按 verdict 分类的计数，必须与 results 实际数量一致（渲染器会校验）。",
+      "properties": {
+        "ok": { "type": "integer" },
+        "warn": { "type": "integer" },
+        "fail": { "type": "integer" },
+        "undiagnosed": { "type": "integer" }
+      },
+      "required": ["ok", "warn", "fail", "undiagnosed"],
+      "additionalProperties": false
+    },
+    "results": {
+      "type": "array",
+      "description": "逐条检查结果，顺序即报告顺序（A–F 分组，组内按 id 排序）。",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "稳定标识，形如 B.1。历史对比、自动修、票里引用都靠它——发布后不改。"
+          },
+          "group": {
+            "type": "string",
+            "enum": ["A", "B", "C", "D", "E", "F"],
+            "description": "A 运行时与工具链 / B 沙箱与文件权限 / C git 与凭据 / D 网络与代理 / E 插件与技能装载 / F 磁盘与编码。"
+          },
+          "title": {
+            "type": "string",
+            "description": "一行说明，给人看，不带术语。"
+          },
+          "verdict": {
+            "type": "string",
+            "enum": ["ok", "warn", "fail", "undiagnosed"]
+          },
+          "level": {
+            "type": "string",
+            "enum": ["info", "low", "medium", "high"],
+            "description": "危险等级：出问题时有多要紧。ok 项一般为 info。"
+          },
+          "detail": {
+            "type": "string",
+            "description": "两三句：现象 + 为什么 + 意味着什么。不写长日志。"
+          },
+          "evidence": {
+            "type": "string",
+            "description": "原始证据片段：命令输出、拒绝文案的逐字引用。可选。"
+          },
+          "fix": {
+            "type": "object",
+            "description": "修复动作。低危项带 autoApplicable=true 时，工具可以「先打印命令 + 一次确认」再执行；高危项只给命令。可选：拿不到确切命令就不给。",
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "确切命令；多条用换行分隔。必须是能直接粘贴执行的完整命令。"
+              },
+              "risk": {
+                "type": "string",
+                "enum": ["low", "medium", "high"]
+              },
+              "needsAdmin": {
+                "type": "boolean",
+                "description": "是否需要管理员/UAC。v1 里这类一律不自动执行。"
+              },
+              "autoApplicable": {
+                "type": "boolean",
+                "description": "是否属于「可自动修、但仍需一次确认」的类别。ACL/权限类永远 false。"
+              },
+              "note": {
+                "type": "string",
+                "description": "执行前后要注意的一句人话。可选。"
+              }
+            },
+            "required": ["command", "risk", "needsAdmin", "autoApplicable"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "group", "title", "verdict", "level", "detail"],
+        "additionalProperties": false
+      }
+    },
+    "undiagnosed": {
+      "type": "array",
+      "description": "verdict=undiagnosed 的检查 id 列表（只放 id，原因在对应 results[].detail 里）。",
+      "items": { "type": "string" }
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "generatedAt",
+    "mode",
+    "sandboxMode",
+    "workspaceRoot",
+    "reportPath",
+    "verdict",
+    "counts",
+    "results",
+    "undiagnosed"
+  ],
+  "additionalProperties": false
+}

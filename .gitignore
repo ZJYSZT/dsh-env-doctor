@@ -1,0 +1,14 @@
+# 依赖与构建产物
+node_modules/
+dist/
+*.tgz
+
+# 本地运行态
+.tmp/
+.dsh-doctor/
+coverage/
+*.log
+
+# 系统垃圾
+.DS_Store
+Thumbs.db

@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-10-14T17:12:03+08:00",
+  "mode": "check",
+  "sandboxMode": "workspace-write",
+  "workspaceRoot": "C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace",
+  "reportPath": "C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace\\.dsh-doctor\\report-20261014-171203.md",
+  "verdict": "fail",
+  "counts": { "ok": 5, "warn": 2, "fail": 1, "undiagnosed": 1 },
+  "results": [
+    {
+      "id": "A.1",
+      "group": "A",
+      "title": "DSH 与 Node 版本",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "dsh 0.2.0-rc.2 / node 24.18.1 / profile desktop。版本可读，profile 存在。",
+      "evidence": "dsh 0.2.0-rc.2 (win32 x64)\nnode v24.18.1"
+    },
+    {
+      "id": "A.2",
+      "group": "A",
+      "title": "关键命令都在 PATH 里",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "git 2.56.0、gh 2.102.0、node 24.18.1 都能直接调用；没有指向已删除路径的失效条目。",
+      "evidence": "git version 2.56.0.windows.1\ngh version 2.102.0 (2026-09-30)"
+    },
+    {
+      "id": "B.1",
+      "group": "B",
+      "title": "沙箱模式与工作区可写性",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "当前为 workspace-write，工作区根可写。这是本会话实际生效的模式（来自 ctx.sandboxPolicy，不是猜的）。",
+      "evidence": "mode=workspace-write\nworkspaceRoot=C:\\Users\\神\\Documents\\deepseek-harness\\default-workspace"
+    },
+    {
+      "id": "B.2",
+      "group": "B",
+      "title": "工作区之外的写入被拒",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "尝试写工作区外的路径被拒，这是 workspace-write 的**预期行为**，不是权限损坏。真要写外面，得对那一次操作显式升到更宽的模式并说明理由。",
+      "evidence": "[sandbox: file access denied under workspace-write mode]"
+    },
+    {
+      "id": "C.1",
+      "group": "C",
+      "title": "gh 登录状态",
+      "verdict": "ok",
+      "level": "info",
+      "detail": "已登录 github.com 账号 ZJYSZT，令牌存在 Windows 凭据管理器（keyring），scopes 为 repo / read:org / workflow。",
+      "evidence": "github.com\n  ✓ Logged in to github.com account ZJYSZT (keyring)\n  - Token scopes: 'read:org', 'repo', 'workflow'"
+    },
+    {
+      "id": "C.2",
+      "group": "C",
+      "title": "git 凭据助手指向一个不存在的程序",
+      "verdict": "fail",
+      "level": "high",
+      "detail": "全局 credential helper 里有一条指向已删除路径的记录，git 在需要凭据时会直接失败（或退回让你手输密码）。这会挡住所有 push/pull，是本次体检里唯一「真的坏了」的一项。",
+      "evidence": "credential.https://github.com.helper=!'C:\\old\\gh.exe' auth git-credential",
+      "fix": {
+        "command": "git config --global --unset-all credential.https://github.com.helper\ngh auth setup-git",
+        "risk": "low",
+        "needsAdmin": false,
+        "autoApplicable": true,
+        "note": "只动这一条 helper 记录，不碰其它 git 配置；第二条会让 gh 重新写回正确路径。"
+      }
+    },
+    {
+      "id": "D.1",
+      "group": "D",
+      "title": "npm registry 连通性",
+      "verdict": "undiagnosed",
+      "level": "info",
+      "detail": "对 registry.npmmirror.com 的探测 10 秒超时，既没成功也没给出明确错误——这一项「说不准」。不等于坏了：可能是瞬时网络问题，也可能需要代理。",
+      "evidence": "registry.npmmirror.com → timeout after 10000ms"
+    },
+    {
+      "id": "E.1",
+      "group": "E",
+      "title": "已装插件的版本要求与当前 DSH 不匹配",
+      "verdict": "warn",
+      "level": "medium",
+      "detail": "@roarpeng/graphflow 声明 peerDependencies @deepseek-ai/dsh-tools >=0.3.0，而当前 DSH 是 0.2.0-rc.2。现在能跑，但下次升级或重装这个插件时会被拒（宿主装完会校验并回滚）。",
+      "evidence": "peerDependencies {\"@deepseek-ai/dsh-tools\":\">=0.3.0\"} — dsh 0.2.0-rc.2",
+      "fix": {
+        "command": "dsh plugin --profile desktop add @roarpeng/graphflow@2.2.9",
+        "risk": "medium",
+        "needsAdmin": false,
+        "autoApplicable": false,
+        "note": "降到与当前 DSH 兼容的版本；升 DSH 才是根治，但那要等上游出正式版。"
+      }
+    },
+    {
+      "id": "F.1",
+      "group": "F",
+      "title": "系统盘剩余空间",
+      "verdict": "warn",
+      "level": "low",
+      "detail": "C: 剩余 12.4 GB。插件与 pnpm store 都在这个盘上，低于 20 GB 时安装大依赖容易失败。暂时不影响使用。",
+      "evidence": "C: free 12.4 GB / total 476 GB"
+    }
+  ],
+  "undiagnosed": ["D.1"]
+}
