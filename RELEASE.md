@@ -38,14 +38,14 @@
 ## 4. 发布清单（发布当天照着打勾）
 
 ```text
-[ ] 1. npm 已登录：npm.cmd whoami（本机实测：未登录，报 ENEEDAUTH）
+[x] 1. npm 已登录：npm.cmd whoami（发布日用 granular token + bypass 2FA，账号 zjystc）
 [x] 2. package.json 的 private 改为 false；version 改成目标版本
 [x] 3. CHANGELOG.md 顶部把 [Unreleased] 改成 [x.y.z] - YYYY-MM-DD
 [x] 4. npm pack --dry-run --json  → 人工核对文件清单（lib/ cordis.patch.yml bundled-skills/ LICENSE NOTICE README CHANGELOG）
 [x] 5. 本地装一次真跑：dsh plugin --profile <临时 profile> add ./dsh-env-doctor-x.y.z.tgz
-[ ] 6. npm publish（开了 2FA 就加 --otp <六位码>）；预发布用 --tag next
-[ ] 7. git tag v<x.y.z> && git push --tags
-[ ] 8. gh release create v<x.y.z> --notes-from-tag（正文取 CHANGELOG 该小节）
+[x] 6. npm publish（granular token + bypass 2FA，2026-10-20 发布成功，registry 可见 0.1.0）
+[x] 7. git tag v<x.y.z> && git push --tags（v0.1.0 已推送，推送前遇 github.com:443 间歇不可达，重试后成功）
+[x] 8. gh release create v<x.y.z> --notes-from-tag（正文取 CHANGELOG 该小节）
 [x] 9. 仓库转 public（gh repo edit --visibility public --accept-visibility-change-consequences）
 [ ] 10. 干净环境复验：dsh plugin --profile desktop add dsh-env-doctor（等过 minimumReleaseAge）
 ```
